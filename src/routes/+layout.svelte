@@ -49,7 +49,7 @@
 
 <svelte:head>
   <title>Solar API demo</title>
-  <meta name="description" content="Solar API demo" />
+  <meta name="description" content="Savings analysis" />
 </svelte:head>
 
 <main class="surface on-surface-text body-medium flex flex-col w-screen h-screen">
