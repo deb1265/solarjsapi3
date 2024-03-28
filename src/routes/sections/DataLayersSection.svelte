@@ -1,18 +1,4 @@
-<!--
- Copyright 2023 Google LLC
 
- Licensed under the Apache License, Version 2.0 (the "License");
- you may not use this file except in compliance with the License.
- You may obtain a copy of the License at
-
-      https://www.apache.org/licenses/LICENSE-2.0
-
- Unless required by applicable law or agreed to in writing, software
- distributed under the License is distributed on an "AS IS" BASIS,
- WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- See the License for the specific language governing permissions and
- limitations under the License.
- -->
 
 <script lang="ts">
   /* global google */
@@ -75,8 +61,9 @@
   let dataLayersResponse: DataLayersResponse | undefined;
   let requestError: RequestError | undefined;
   let apiResponseDialog: MdDialog;
-  let layerId: LayerId | 'none' = 'monthlyFlux';
+  let layerId: LayerId | 'none' = 'rgb';
   let layer: Layer | undefined;
+  let imageryQuality: 'HIGH' | 'MEDIUM' | 'LOW';
 
   let playAnimation = true;
   let tick = 0;
@@ -85,7 +72,7 @@
   let hour = 0;
 
   let overlays: google.maps.GroundOverlay[] = [];
-  let showRoofOnly = false;
+  let showRoofOnly = true;
   async function showDataLayer(reset = false) {
     if (reset) {
       dataLayersResponse = undefined;
@@ -120,6 +107,8 @@
         requestError = e as RequestError;
         return;
       }
+
+      imageryQuality = dataLayersResponse.imageryQuality;
 
       try {
         layer = await getLayer(layerId, dataLayersResponse, googleMapsApiKey);
@@ -193,7 +182,7 @@
     }, 1000);
   });
 </script>
-
+<!--
 {#if requestError}
   <div class="error-container on-error-container-text">
     <Expandable section={title} icon="error" {title} subtitle={requestError.error.status}>
@@ -225,7 +214,10 @@
       <Dropdown
         bind:value={layerId}
         options={dataLayerOptions}
-        onChange={async () => showDataLayer(true)}
+        onChange={async () => {
+          layer = undefined;
+          showDataLayer();
+        }}
       />
 
       {#if layerId == 'none'}
@@ -236,6 +228,19 @@
         {#if layer.id == 'hourlyShade'}
           <Calendar bind:month bind:day onChange={async () => showDataLayer()} />
         {/if}
+
+        <span class="outline-text label-medium">
+          {#if imageryQuality == 'HIGH'}
+            <p><b>Low altitude aerial imagery</b> available.</p>
+            <p>Imagery and DSM data were processed at <b>10 cm/pixel</b>.</p>
+          {:else if imageryQuality == 'MEDIUM'}
+            <p><b>AI augmented aerial imagery</b> available.</p>
+            <p>Imagery and DSM data were processed at <b>25 cm/pixel</b>.</p>
+          {:else if imageryQuality == 'LOW'}
+            <p><b>AI augmented aerial or satellite imagery</b> available.</p>
+            <p>Imagery and DSM data were processed at <b>50 cm/pixel</b>.</p>
+          {/if}
+        </span>
 
         <InputBool bind:value={showPanels} label="Solar panels" />
         <InputBool bind:value={showRoofOnly} label="Roof only" onChange={() => showDataLayer()} />
@@ -374,3 +379,4 @@
     {/if}
   </div>
 </div>
+ -->
