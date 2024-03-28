@@ -1,127 +1,214 @@
-<!--
- Copyright 2023 Google LLC
-
- Licensed under the Apache License, Version 2.0 (the "License");
- you may not use this file except in compliance with the License.
- You may obtain a copy of the License at
-
-      https://www.apache.org/licenses/LICENSE-2.0
-
- Unless required by applicable law or agreed to in writing, software
- distributed under the License is distributed on an "AS IS" BASIS,
- WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- See the License for the specific language governing permissions and
- limitations under the License.
- -->
-
 <script lang="ts">
   /* global google */
-
-  import { Loader } from '@googlemaps/js-api-loader';
+  import * as GMAPILoader from '@googlemaps/js-api-loader';
+  const { Loader } = GMAPILoader;
   import { onMount } from 'svelte';
-
   import SearchBar from './components/SearchBar.svelte';
   import Sections from './sections/Sections.svelte';
-
+  import SolarPotentialSection from './sections/SolarPotentialSection.svelte';
+  import SolarPotentialSummary from './components/SolarPotentialSummary.svelte';
+  let installationSizeKw: number;
+  let savings: number;
   const googleMapsApiKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY;
   const defaultPlace = {
     name: 'Rinconada Library',
     address: '1213 Newell Rd, Palo Alto, CA 94303',
+    location: { lat: 37.4419, lng: -122.1430 },
+    zoom: 22, // Increase the zoom level to make the house appear larger
   };
+
   let location: google.maps.LatLng | undefined;
-  const zoom = 19;
 
-  // Initialize app.
-  let mapElement: HTMLElement;
-  let map: google.maps.Map;
-  let geometryLibrary: google.maps.GeometryLibrary;
-  let mapsLibrary: google.maps.MapsLibrary;
-  let placesLibrary: google.maps.PlacesLibrary;
-  onMount(async () => {
-    // Load the Google Maps libraries.
-    const loader = new Loader({ apiKey: googleMapsApiKey });
-    const libraries = {
-      geometry: loader.importLibrary('geometry'),
-      maps: loader.importLibrary('maps'),
-      places: loader.importLibrary('places'),
-    };
-    geometryLibrary = await libraries.geometry;
-    mapsLibrary = await libraries.maps;
-    placesLibrary = await libraries.places;
+// Initialize app.
+let mapElement: HTMLElement;
+let map: google.maps.Map;
+let geometryLibrary: google.maps.GeometryLibrary;
+let mapsLibrary: google.maps.MapsLibrary;
+let placesLibrary: google.maps.PlacesLibrary;
 
-    // Get the address information for the default location.
-    const geocoder = new google.maps.Geocoder();
-    const geocoderResponse = await geocoder.geocode({
-      address: defaultPlace.address,
-    });
-    const geocoderResult = geocoderResponse.results[0];
+onMount(async () => {
+  // Load the Google Maps libraries.
+  const loader = new Loader({ apiKey: googleMapsApiKey });
+  const libraries = {
+    geometry: loader.importLibrary('geometry'),
+    maps: loader.importLibrary('maps'),
+    places: loader.importLibrary('places'),
+  };
+  geometryLibrary = await libraries.geometry;
+  mapsLibrary = await libraries.maps;
+  placesLibrary = await libraries.places;
 
-    // Initialize the map at the desired location.
-    location = geocoderResult.geometry.location;
-    map = new mapsLibrary.Map(mapElement, {
+  // Initialize the map at the desired location and zoom level
+  location = new google.maps.LatLng(defaultPlace.location.lat, defaultPlace.location.lng);
+
+
+    // Define a custom map style that hides all map features
+    const mapStyle = [
+      {
+        featureType: 'all',
+        elementType: 'all',
+        stylers: [{ visibility: 'off' }],
+      },
+      {
+        featureType: 'landscape',
+        elementType: 'geometry',
+        stylers: [{ visibility: 'on' }, { color: '#ffffff' }],
+      },
+    ];
+
+    map = new google.maps.Map(mapElement, {
       center: location,
-      zoom: zoom,
+      zoom: defaultPlace.zoom,
       tilt: 0,
       mapTypeId: 'satellite',
-      mapTypeControl: false,
-      fullscreenControl: false,
-      rotateControl: false,
-      streetViewControl: false,
-      zoomControl: false,
+      disableDefaultUI: true,
+      styles: mapStyle,
+      zoomControl: true, // Enable zoom control
+      draggable: true, // Enable dragging
+      scrollwheel: true, // Enable scrolling to zoom
+      disableDoubleClickZoom: false, // Enable double-click to zoom
     });
   });
 </script>
 
-<!-- Top bar -->
-<div class="flex flex-row h-full">
-  <!-- Main map -->
-  <div bind:this={mapElement} class="w-full" />
+<style>
+  .container {
+    display: flex;
+    flex-direction: column;
+    height: 100vh;
+    padding: 20px;
+  }
+  .header {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    margin-bottom: 50px;
+    background-color: #1a73e8;
+    color: white;
+    padding: 20px;
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  }
+  .header h1 {
+    font-size: 32px;
+    font-weight: bold;
+    text-align: center;
+  }
+  .icon {
+    width: 24px;
+    height: 24px;
+    margin-right: 8px;
+  }
+  .content {
+    flex: 1;
+    display: flex;
+  }
+  .map-container {
+    flex: 2; /* Increase the flex value to make the map container larger */
+    position: relative;
+    margin: 0 20px;
+  }
+  .map {
+    position: relative;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+  }
+  .sidebar {
+    flex: 1;
+    padding: 20px;
+    border: 1px solid var(--md-sys-color-outline);
+    border-radius: 4px;
+  }
+  .building-insights-sidebar {
+    margin-right: 20px;
+    background-color: #e8f0fe;
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  }
+  .bottom-section {
+    margin-top: 20px;
+    border-top: 1px solid var(--md-sys-color-outline);
+    padding-top: 20px;
+  }
 
-  <!-- Side bar -->
-  <aside class="flex-none md:w-96 w-80 p-2 pt-3 overflow-auto">
-    <div class="flex flex-col space-y-2 h-full">
-      {#if placesLibrary && map}
-        <SearchBar bind:location {placesLibrary} {map} initialValue={defaultPlace.name} />
-      {/if}
+  .eligible-list {
+    list-style-type: none;
+    padding: 20px;
+  }
 
-      <div class="p-4 surface-variant outline-text rounded-lg space-y-3">
-        <p>
-          <a
-            class="primary-text"
-            href="https://developers.google.com/maps/documentation/solar/overview?hl=en"
-            target="_blank"
-          >
-            Two distinct endpoints of the <b>Solar API</b>
-            <md-icon class="text-sm">open_in_new</md-icon>
-          </a>
-          offer many benefits to solar marketplace websites, solar installers, and solar SaaS designers.
-        </p>
+  .eligible-list li {
+    display: flex;
+    align-items: center;
+    margin-bottom: 10px;
+    padding: 20px;
+    background-color: #ffffff;
+    border-radius: 4px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  }
 
-        <p>
-          <b>Click on an area below</b>
-          to see what type of information the Solar API can provide.
-        </p>
-      </div>
+  .savings-analysis {
+    margin-top: 20px;
+    padding: 20px;
+    background-color: #ffffff;
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  }
 
-      {#if location}
-        <Sections {location} {map} {geometryLibrary} {googleMapsApiKey} />
-      {/if}
+  .savings-analysis p {
+    margin-bottom: 50px;
+  }
 
-      <div class="grow" />
+  .savings-analysis .note {
+    font-style: italic;
+    color: #666666;
+  }
+</style>
 
-      <div class="flex flex-col items-center w-full">
-        <md-text-button
-          href="https://github.com/googlemaps-samples/js-solar-potential"
-          target="_blank"
-        >
-          View code on GitHub
-          <img slot="icon" src="github-mark.svg" alt="GitHub" width="16" height="16" />
-        </md-text-button>
-      </div>
 
-      <span class="pb-4 text-center outline-text label-small">
-        This is not an officially supported Google product.
-      </span>
+<main class="surface on-surface-text body-medium">
+  <div class="container">
+    <div class="header">
+      <h1>Congratulations! Your Design is Ready</h1>
     </div>
-  </aside>
-</div>
+    <div class="content">
+      <div class="sidebar building-insights-sidebar">
+        <div class="p-4 surface-variant outline-text rounded-lg space-y-3">
+          <h2 class="headline-small">Eligible for:</h2>
+          <ul>
+            <li><span class="icon">🏠</span> Lease</li>
+            <li><span class="icon">💸</span> Loan</li>
+            <li><span class="icon">💰</span> Upfront Purchase</li>
+          </ul>
+          <div class="savings-analysis">
+            <p>Estimated Savings: $X,XXX</p>
+            <p>Estimated Federal Credit: $X,XXX</p>
+            <p>Estimated State Credit: $X,XXX</p>
+            <p>Estimated PTA (if you live in LI): $X,XXX</p>
+            <p class="note">For a more accurate customized design based on exact bills and rate, we will call you soon!</p>
+          </div>
+        </div>
+      </div>
+      <div class="map-container">
+        <div bind:this={mapElement} class="map"></div>
+
+      </div>
+      <div class="sidebar">
+        {#if placesLibrary && map}
+          <div class="p-4">
+            <div style="width: 300px;">
+              <SearchBar bind:location {placesLibrary} {map} initialValue={defaultPlace.name} />
+            </div>
+          </div>
+        {/if}
+        {#if location}
+          <Sections {location} {map} {geometryLibrary} {googleMapsApiKey} />
+        {/if}
+      </div>
+    </div>
+    <div class="bottom-section">
+      <!-- Add your tables and analysis components here -->
+    </div>
+  </div>
+</main>
