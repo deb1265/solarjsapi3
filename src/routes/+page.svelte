@@ -3,18 +3,29 @@
   import * as GMAPILoader from '@googlemaps/js-api-loader';
   const { Loader } = GMAPILoader;
   import { onMount } from 'svelte';
+  import { page } from '$app/stores';
   import SearchBar from './components/SearchBar.svelte';
   import Sections from './sections/Sections.svelte';
   import SolarPotentialSection from './sections/SolarPotentialSection.svelte';
+  import SolarPotentialSummary from './components/SolarPotentialSummary.svelte';
+  
   let installationSizeKw: number;
   let savings: number;
   const googleMapsApiKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY;
-  
+
   let defaultPlace = {
     name: 'Humayun House ADDRESS',
-    address: import.meta.env.VITE_ADDRESS,
+    address: '', // Initialize with an empty string
     zoom: 22,
   };
+
+  // Get the address from the URL parameter
+  $: {
+    const addressParam = $page.url.searchParams.get('address');
+    if (addressParam) {
+      defaultPlace.address = decodeURIComponent(addressParam);
+    }
+  }
  
   let location: google.maps.LatLng | undefined;
 
@@ -25,10 +36,10 @@
   let mapsLibrary: google.maps.MapsLibrary;
   let placesLibrary: google.maps.PlacesLibrary;
 
-  async function geocodeAddress(address: string): Promise<google.maps.LatLngLiteral | undefined> {
+  async function geocodeAddress(): Promise<google.maps.LatLngLiteral | undefined> {
     const geocoder = new google.maps.Geocoder();
     return new Promise((resolve) => {
-      geocoder.geocode({ address }, (results, status) => {
+      geocoder.geocode({ address: defaultPlace.address }, (results, status) => {
         if (status === 'OK' && results && results.length > 0) {
           const location = results[0].geometry.location;
           resolve({ lat: location.lat(), lng: location.lng() });
@@ -52,7 +63,7 @@
     placesLibrary = await libraries.places;
 
     // Geocode the address to get the latitude and longitude
-    const locationData = await geocodeAddress(defaultPlace.address);
+    const locationData = await geocodeAddress();
     if (locationData) {
       location = new google.maps.LatLng(locationData.lat, locationData.lng);
 
@@ -208,7 +219,6 @@
       </div>
       <div class="map-container">
         <div bind:this={mapElement} class="map"></div>
-
       </div>
       <div class="sidebar">
         {#if placesLibrary && map}
