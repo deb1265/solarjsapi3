@@ -12,7 +12,7 @@
   
   let defaultPlace = {
     name: 'Humayun House ADDRESS',
-    address: '104 Gleeland St, Deer Park, NY 11729',
+    address: import.meta.env.VITE_ADDRESS,
     zoom: 22,
   };
  
