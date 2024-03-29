@@ -6,7 +6,6 @@
   import { page } from '$app/stores';
   import SearchBar from './components/SearchBar.svelte';
   import Sections from './sections/Sections.svelte';
-  import SolarPotentialSection from './sections/SolarPotentialSection.svelte';
   
   let installationSizeKw: number;
   let savings: number;
