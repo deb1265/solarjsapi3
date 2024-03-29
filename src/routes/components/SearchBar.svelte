@@ -30,7 +30,6 @@
   let textFieldElement: MdFilledTextField;
 
   onMount(async () => {
-    // https://lit.dev/docs/components/shadow-dom/
     await textFieldElement.updateComplete;
     const inputElement = textFieldElement.renderRoot.querySelector('input') as HTMLInputElement;
     const autocomplete = new placesLibrary.Autocomplete(inputElement, {
