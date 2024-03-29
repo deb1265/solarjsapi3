@@ -6,68 +6,86 @@
   import SearchBar from './components/SearchBar.svelte';
   import Sections from './sections/Sections.svelte';
   import SolarPotentialSection from './sections/SolarPotentialSection.svelte';
+  import SolarPotentialSummary from './components/SolarPotentialSummary.svelte';
   let installationSizeKw: number;
   let savings: number;
   const googleMapsApiKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY;
-  const defaultPlace = {
-    name: 'Rinconada Library',
-    address: '1213 Newell Rd, Palo Alto, CA 94303',
-    location: { lat: 37.4419, lng: -122.1430 },
-    zoom: 22, // Increase the zoom level to make the house appear larger
+  
+  let defaultPlace = {
+    name: 'Humayun House ADDRESS',
+    address: import.meta.env.VITE_ADDRESS,
+    zoom: 22,
   };
-
+ 
   let location: google.maps.LatLng | undefined;
 
-// Initialize app.
-let mapElement: HTMLElement;
-let map: google.maps.Map;
-let geometryLibrary: google.maps.GeometryLibrary;
-let mapsLibrary: google.maps.MapsLibrary;
-let placesLibrary: google.maps.PlacesLibrary;
+  // Initialize app.
+  let mapElement: HTMLElement;
+  let map: google.maps.Map;
+  let geometryLibrary: google.maps.GeometryLibrary;
+  let mapsLibrary: google.maps.MapsLibrary;
+  let placesLibrary: google.maps.PlacesLibrary;
 
-onMount(async () => {
-  // Load the Google Maps libraries.
-  const loader = new Loader({ apiKey: googleMapsApiKey });
-  const libraries = {
-    geometry: loader.importLibrary('geometry'),
-    maps: loader.importLibrary('maps'),
-    places: loader.importLibrary('places'),
-  };
-  geometryLibrary = await libraries.geometry;
-  mapsLibrary = await libraries.maps;
-  placesLibrary = await libraries.places;
-
-  // Initialize the map at the desired location and zoom level
-  location = new google.maps.LatLng(defaultPlace.location.lat, defaultPlace.location.lng);
-
-
-    // Define a custom map style that hides all map features
-    const mapStyle = [
-      {
-        featureType: 'all',
-        elementType: 'all',
-        stylers: [{ visibility: 'off' }],
-      },
-      {
-        featureType: 'landscape',
-        elementType: 'geometry',
-        stylers: [{ visibility: 'on' }, { color: '#ffffff' }],
-      },
-    ];
-
-    map = new google.maps.Map(mapElement, {
-      center: location,
-      zoom: defaultPlace.zoom,
-      tilt: 0,
-      mapTypeId: 'satellite',
-      disableDefaultUI: true,
-      styles: mapStyle,
-      zoomControl: true, // Enable zoom control
-      draggable: true, // Enable dragging
-      scrollwheel: true, // Enable scrolling to zoom
-      disableDoubleClickZoom: false, // Enable double-click to zoom
+  async function geocodeAddress(address: string): Promise<google.maps.LatLngLiteral | undefined> {
+    const geocoder = new google.maps.Geocoder();
+    return new Promise((resolve) => {
+      geocoder.geocode({ address }, (results, status) => {
+        if (status === 'OK' && results && results.length > 0) {
+          const location = results[0].geometry.location;
+          resolve({ lat: location.lat(), lng: location.lng() });
+        } else {
+          resolve(undefined);
+        }
+      });
     });
+  }
+
+  onMount(async () => {
+    // Load the Google Maps libraries.
+    const loader = new Loader({ apiKey: googleMapsApiKey });
+    const libraries = {
+      geometry: loader.importLibrary('geometry'),
+      maps: loader.importLibrary('maps'),
+      places: loader.importLibrary('places'),
+    };
+    geometryLibrary = await libraries.geometry;
+    mapsLibrary = await libraries.maps;
+    placesLibrary = await libraries.places;
+
+    // Geocode the address to get the latitude and longitude
+    const locationData = await geocodeAddress(defaultPlace.address);
+    if (locationData) {
+      location = new google.maps.LatLng(locationData.lat, locationData.lng);
+
+      // Define a custom map style that hides all map features
+      const mapStyle = [
+        {
+          featureType: 'all',
+          elementType: 'all',
+          stylers: [{ visibility: 'off' }],
+        },
+        {
+          featureType: 'landscape',
+          elementType: 'geometry',
+          stylers: [{ visibility: 'on' }, { color: '#ffffff' }],
+        },
+      ];
+
+      map = new google.maps.Map(mapElement, {
+        center: location,
+        zoom: defaultPlace.zoom,
+        tilt: 0,
+        mapTypeId: 'satellite',
+        disableDefaultUI: true,
+        styles: mapStyle,
+        zoomControl: true,
+        draggable: true,
+        scrollwheel: true,
+        disableDoubleClickZoom: false,
+      });
+    }
   });
+  
 </script>
 
 <style>
@@ -103,7 +121,7 @@ onMount(async () => {
     display: flex;
   }
   .map-container {
-    flex: 2; /* Increase the flex value to make the map container larger */
+    flex: 2;
     position: relative;
     margin: 0 20px;
   }
