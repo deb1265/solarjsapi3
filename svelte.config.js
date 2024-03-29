@@ -20,19 +20,27 @@ import * as child_process from 'node:child_process';
 
 /** @type {import('@sveltejs/kit').Config} */
 const config = {
-  // Consult https://kit.svelte.dev/docs/integrations#preprocessors
-  // for more information about preprocessors
   preprocess: vitePreprocess(),
 
   kit: {
-    // adapter-auto only supports some environments, see https://kit.svelte.dev/docs/adapter-auto for a list.
-    // If your environment is not supported or you settled on a specific environment, switch out the adapter.
-    // See https://kit.svelte.dev/docs/adapters for more information about adapters.
     adapter: adapter(),
 
-    // https://kit.svelte.dev/docs/configuration#version
     version: {
       name: child_process.execSync('git rev-parse HEAD').toString().trim(),
+    },
+
+    prerender: {
+      handleHttpError: ({ path, message, stack }) => {
+        // Handle the HTTP error here
+        console.error(`HTTP error occurred: ${message}`);
+        console.error(`Path: ${path}`);
+        console.error(`Stack trace: ${stack}`);
+        // Return a custom error page or fallback response
+        return {
+          message: 'An error occurred during prerendering.',
+          // Add any other relevant properties
+        };
+      },
     },
   },
 };
