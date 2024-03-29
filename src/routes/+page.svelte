@@ -7,7 +7,6 @@
   import SearchBar from './components/SearchBar.svelte';
   import Sections from './sections/Sections.svelte';
   import SolarPotentialSection from './sections/SolarPotentialSection.svelte';
-  import SolarPotentialSummary from './components/SolarPotentialSummary.svelte';
   
   let installationSizeKw: number;
   let savings: number;
