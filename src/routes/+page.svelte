@@ -6,7 +6,7 @@
   import { page } from '$app/stores';
   import SearchBar from './components/SearchBar.svelte';
   import Sections from './sections/Sections.svelte';
-  
+  import { browser } from '$app/environment';
   let installationSizeKw: number;
   let savings: number;
   const googleMapsApiKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY;
@@ -19,10 +19,12 @@
 
   // Get the address from the URL parameter
   $: {
-    const addressParam = $page.url.searchParams.get('address');
-    if (addressParam) {
-      defaultPlace.address = decodeURIComponent(addressParam);
-    }
+  if (browser) {
+      const addressParam = $page.url.searchParams.get('address');
+      if (addressParam) {
+        defaultPlace.address = decodeURIComponent(addressParam);
+      }
+ }
   }
  
   let location: google.maps.LatLng | undefined;
