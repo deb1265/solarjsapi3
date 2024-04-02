@@ -1,4 +1,3 @@
-
 <script lang="ts">
   /* global google */
 
@@ -8,7 +7,7 @@
   import SummaryCard from '../components/SummaryCard.svelte';
   import type { SolarPanelConfig } from '../solar';
   import Table from '../components/Table.svelte';
-
+  
   /* eslint-disable @typescript-eslint/ban-ts-comment */
   // @ts-ignore
   import { GoogleCharts } from 'google-charts';
@@ -18,7 +17,8 @@
   import InputMoney from '../components/InputMoney.svelte';
   import InputPercent from '../components/InputPercent.svelte';
   import InputRatio from '../components/InputRatio.svelte';
-  export let expandedSection: string;
+
+  export let expandedSection: string = 'Solar savings analysis';
   export let configId: number;
   export let monthlyAverageEnergyBillInput: number;
   export let energyCostPerKwhInput: number;
@@ -28,7 +28,7 @@
   export let defaultPanelCapacityWatts: number;
 
   const icon = 'payments';
-  const title = 'Solar Potential analysis';
+  const title = 'Solar savings analysis';
 
   let costChart: HTMLElement;
   let showAdvancedSettings = false;
@@ -42,14 +42,14 @@
   let monthlyAverageEnergyBill: number = 300;
   let energyCostPerKwh = 0.31;
   let panelCapacityWatts = 400;
-  let solarIncentives: number = 7000;
+  let solarIncentives: number = 0;
   let installationCostPerWatt: number = 4.0;
   let installationLifeSpan: number = 20;
 
   // Advanced settings
   let dcToAcDerate = 0.85;
   let efficiencyDepreciationFactor = 0.995;
-  let costIncreaseFactor = 1.022;
+  let costIncreaseFactor = 1.06;
   let discountRate = 1.04;
 
   // Solar installation
@@ -71,7 +71,7 @@
     (yearlyKwhEnergyProduced, year) => {
       const billEnergyKwh = yearlyKwhEnergyConsumption - yearlyKwhEnergyProduced;
       const billEstimate =
-        (billEnergyKwh * energyCostPerKwh * costIncreaseFactor ** year) / discountRate ** year;
+        (billEnergyKwh * energyCostPerKwh *2*costIncreaseFactor ** year) / discountRate ** year;
       return Math.max(billEstimate, 0); // bill cannot be negative
     },
   );
@@ -88,7 +88,7 @@
   console.log(`Cost without solar: $${totalCostWithoutSolar.toFixed(2)}`);
 
   // Savings with solar for installation life span
-  let savings: number = totalCostWithoutSolar - totalCostWithSolar;
+  let savings: number = totalCostWithoutSolar - totalCostWithSolar*0.45;
   console.log(`Savings: $${savings.toFixed(2)} in ${installationLifeSpan} years`);
   // [END solar_potential_calculations]
 
@@ -115,7 +115,7 @@
     return Math.max(billEstimate, 0); // bill cannot be negative
   });
   $: remainingLifetimeUtilityBill = yearlyUtilityBillEstimates.reduce((x, y) => x + y, 0);
-  $: totalCostWithSolar = installationCostTotal + remainingLifetimeUtilityBill - solarIncentives;
+  $: totalCostWithSolar = installationCostTotal + remainingLifetimeUtilityBill - installationCostTotal*0.50;
   $: yearlyCostWithoutSolar = [...Array(installationLifeSpan).keys()].map(
     (year) =>
       (monthlyAverageEnergyBillInput * 12 * costIncreaseFactor ** year) / discountRate ** year,
@@ -134,41 +134,36 @@
       }
       const year = new Date().getFullYear();
 
-      let costWithSolar = 0;
-      const cumulativeCostsWithSolar = yearlyUtilityBillEstimates.map(
-        (billEstimate, i) =>
-          (costWithSolar +=
-            i == 0 ? billEstimate + installationCostTotal - solarIncentives : billEstimate),
+      const yearlySavings = yearlyCostWithoutSolar.map(
+        (costWithoutSolar, i) => costWithoutSolar - yearlyUtilityBillEstimates[i]
       );
-      let costWithoutSolar = 0;
-      const cumulativeCostsWithoutSolar = yearlyCostWithoutSolar.map(
-        (cost) => (costWithoutSolar += cost),
-      );
-      breakEvenYear = cumulativeCostsWithSolar.findIndex(
-        (costWithSolar, i) => costWithSolar <= cumulativeCostsWithoutSolar[i],
-      );
+      const cumulativeSavings = yearlySavings.reduce((acc, savings, i) => {
+        acc.push(i === 0 ? savings : savings + acc[i-1]);
+        return acc;
+      }, [] as number[]);
 
       const data = google.visualization.arrayToDataTable([
-        ['Year', 'Solar', 'No solar'],
-        [year.toString(), 0, 0],
-        ...cumulativeCostsWithSolar.map((_, i) => [
+        ['Year', 'Savings'],
+        ...cumulativeSavings.map((savings, i) => [
           (year + i + 1).toString(),
-          cumulativeCostsWithSolar[i],
-          cumulativeCostsWithoutSolar[i],
+          savings
         ]),
       ]);
 
       /* eslint-disable @typescript-eslint/no-explicit-any */
       const googleCharts = google.charts as any;
-      const chart = new googleCharts.Line(costChart);
-      const options = googleCharts.Line.convertOptions({
-        title: `Cost analysis for ${installationLifeSpan} years`,
+      const chart = new googleCharts.Bar(costChart);
+      const options = googleCharts.Bar.convertOptions({
+        title: `Cumulative Savings Over ${installationLifeSpan} Years`,
         width: 350,
         height: 200,
+        vAxis: {
+          title: 'Savings ($)'
+        }
       });
       chart.draw(data, options);
     },
-    { packages: ['line'] },
+    { packages: ['bar'] },
   );
 
   function updateConfig() {
@@ -184,147 +179,7 @@
   }
 </script>
 
-<Expandable
-  bind:section={expandedSection}
-  {icon}
-  {title}
-  subtitle="Values are only placeholders."
-  subtitle2="Update with your own values."
-  secondary
->
-  <div class="flex flex-col space-y-4 pt-1">
-    <div class="p-4 mb-4 surface-variant outline-text rounded-lg">
-      <p class="relative inline-flex items-center space-x-2">
-        <md-icon class="md:w-6 w-8">info</md-icon>
-        <span>
-          Projections use a
-          <a
-            class="primary-text"
-            href="https://developers.google.com/maps/documentation/solar/calculate-costs-us"
-            target="_blank"
-          >
-            USA financial model
-            <md-icon class="text-sm">open_in_new</md-icon>
-          </a>
-        </span>
-      </p>
-    </div>
-
-    <InputMoney
-      bind:value={monthlyAverageEnergyBillInput}
-      icon="credit_card"
-      label="Monthly average energy bill"
-      onChange={updateConfig}
-    />
-
-    <div class="inline-flex items-center space-x-2">
-      <div class="grow">
-        <InputPanelsCount bind:configId {solarPanelConfigs} />
-      </div>
-      <md-icon-button role={undefined} on:click={updateConfig}>
-        <md-icon>sync</md-icon>
-      </md-icon-button>
-    </div>
-
-    <InputMoney
-      bind:value={energyCostPerKwhInput}
-      icon="paid"
-      label="Energy cost per kWh"
-      onChange={updateConfig}
-    />
-
-    <InputMoney
-      bind:value={solarIncentives}
-      icon="redeem"
-      label="Solar incentives"
-      onChange={updateConfig}
-    />
-
-    <InputMoney
-      bind:value={installationCostPerWatt}
-      icon="request_quote"
-      label="Installation cost per Watt"
-      onChange={updateConfig}
-    />
-
-    <InputNumber
-      bind:value={panelCapacityWattsInput}
-      icon="bolt"
-      label="Panel capacity"
-      suffix="Watts"
-      onChange={updateConfig}
-    />
-
-    <div class="flex flex-col items-center w-full">
-      <md-text-button
-        trailing-icon
-        role={undefined}
-        on:click={() => (showAdvancedSettings = !showAdvancedSettings)}
-      >
-        {showAdvancedSettings ? 'Hide' : 'Show'} advanced settings
-        <md-icon slot="icon">
-          {showAdvancedSettings ? 'expand_less' : 'expand_more'}
-        </md-icon>
-      </md-text-button>
-    </div>
-
-    {#if showAdvancedSettings}
-      <div class="flex flex-col space-y-4" transition:slide={{ duration: 200 }}>
-        <InputNumber
-          bind:value={installationLifeSpan}
-          icon="date_range"
-          label="Installation lifespan"
-          suffix="years"
-          onChange={updateConfig}
-        />
-
-        <InputPercent
-          bind:value={dcToAcDerateInput}
-          icon="dynamic_form"
-          label="DC to AC conversion "
-          onChange={updateConfig}
-        />
-
-        <InputRatio
-          bind:value={efficiencyDepreciationFactor}
-          icon="trending_down"
-          label="Panel efficiency decline per year"
-          decrease
-          onChange={updateConfig}
-        />
-
-        <InputRatio
-          bind:value={costIncreaseFactor}
-          icon="price_change"
-          label="Energy cost increase per year"
-          onChange={updateConfig}
-        />
-
-        <InputRatio
-          bind:value={discountRate}
-          icon="local_offer"
-          label="Discount rate per year"
-          onChange={updateConfig}
-        />
-      </div>
-    {/if}
-
-    <div class="grid justify-items-end">
-      <md-filled-tonal-button
-        trailing-icon
-        role={undefined}
-        href="https://developers.google.com/maps/documentation/solar/calculate-costs-us"
-        target="_blank"
-      >
-        More details
-        <md-icon slot="icon">open_in_new</md-icon>
-      </md-filled-tonal-button>
-    </div>
-  </div>
-</Expandable>
-
 <div class="absolute top-0 left-0">
-  {#if expandedSection == title}
     <div class="flex flex-col space-y-2 m-2">
       <SummaryCard
         {icon}
@@ -332,7 +187,7 @@
         rows={[
           {
             icon: 'energy_savings_leaf',
-            name: 'Yearly energy',
+            name: 'Solar will produce in a year',
             value: showNumber(
               (solarPanelConfigs[configId]?.yearlyEnergyDcKwh ?? 0) * panelCapacityRatio,
             ),
@@ -340,15 +195,22 @@
           },
           {
             icon: 'speed',
-            name: 'Installation size',
+            name: 'Total System Size on your roof',
             value: showNumber(installationSizeKw),
             units: 'kW',
           },
           {
-            icon: 'request_quote',
-            name: 'Installation cost',
-            value: showMoney(installationCostTotal),
+            icon: 'speed',
+            name: 'Estimated Monthly payment with solar',
+            value: showMoney(installationCostTotal/(25*12)),
+            units: '',
           },
+          {
+            icon: 'request_quote',
+            name: 'Installation cost after incentives(for upfront)',
+            value: showMoney(installationCostTotal-0.65*installationCostTotal),
+          },
+
           {
             icon: [
               'battery_0_bar',
@@ -359,9 +221,8 @@
               'battery_5_bar',
               'battery_full',
             ][Math.floor(Math.min(Math.round(energyCovered * 100) / 100, 1) * 6)],
-            name: 'Energy covered',
-            value: Math.round(energyCovered * 100).toString(),
-            units: '%',
+            name: `Solar will cover ${Math.round(energyCovered * 100)}% of your electric bill`,
+            value: '',
           },
         ]}
       />
@@ -374,22 +235,17 @@
           rows={[
             {
               icon: 'wallet',
-              name: 'Cost without solar',
+              name: '20 yr PSEG/CONED bill if no solar',
               value: showMoney(totalCostWithoutSolar),
             },
             {
-              icon: 'wb_sunny',
-              name: 'Cost with solar',
-              value: showMoney(totalCostWithSolar),
-            },
-            {
               icon: 'savings',
-              name: 'Savings',
+              name: 'Total 20 Year savings with solar',
               value: showMoney(savings),
             },
             {
               icon: 'balance',
-              name: 'Break even',
+              name: 'ROI if paid all upfront',
               value:
                 breakEvenYear >= 0
                   ? `${breakEvenYear + new Date().getFullYear() + 1} in ${breakEvenYear + 1}`
@@ -398,7 +254,30 @@
             },
           ]}
         />
+        <div class="mt-4">
+          <h3 class="text-lg font-bold mb-2">Rebates and incentives you are eligible for:</h3>
+          <Table
+            rows={[
+              {
+                icon: 'attach_money',
+                name: 'Federal tax credit',
+                value: showMoney(0.30 * installationCostTotal),
+              },
+              {
+                icon: 'attach_money',
+                name: 'State tax credit',
+                value: showMoney(Math.min(0.25 * installationCostTotal, 5000)),
+              },
+              {
+                icon: 'home',
+                name: 'Property Tax abatement for NYC',
+                value: showMoney(0.30 * installationCostTotal),
+              },
+            ]}
+          />
+        </div>
       </div>
     </div>
-  {/if}
 </div>
+
+
