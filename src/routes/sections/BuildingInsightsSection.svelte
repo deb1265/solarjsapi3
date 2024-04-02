@@ -165,7 +165,7 @@
     ).toFixed(2)} MWh</p>
   </div>
 
-    
+
   <div class="mt-4">
     <div class="flex flex-col space-y-2 m-2">
       <SummaryCard
