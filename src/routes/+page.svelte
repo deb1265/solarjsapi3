@@ -11,7 +11,7 @@
   let defaultPlace = { name: '', address: '' };
   let monthlyAverageEnergyBillInput = 0;
   let location: google.maps.LatLng;
-  const zoom = 19;
+  const zoom = 20;
   let mapElement: HTMLElement;
   let map: google.maps.Map;
   let geometryLibrary: google.maps.GeometryLibrary;
