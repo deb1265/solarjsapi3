@@ -61,7 +61,7 @@
   let dataLayersResponse: DataLayersResponse | undefined;
   let requestError: RequestError | undefined;
   let apiResponseDialog: MdDialog;
-  let layerId: LayerId | 'none' = 'none';
+  let layerId: LayerId | 'rgb' = 'rgb';
   let layer: Layer | undefined;
   let imageryQuality: 'HIGH' | 'MEDIUM' | 'LOW';
 
