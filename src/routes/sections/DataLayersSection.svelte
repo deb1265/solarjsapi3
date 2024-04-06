@@ -62,7 +62,7 @@
   let requestError: RequestError | undefined;
   let apiResponseDialog: MdDialog;
   let layerId:'dsm';
-  let layer: Layer | undefined;
+  let layer: Layer | 'rgb';
   let imageryQuality: 'HIGH' | 'MEDIUM' | 'LOW';
 
   let playAnimation = true;
